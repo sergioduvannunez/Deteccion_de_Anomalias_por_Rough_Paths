@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+*.pyo
+Raw_Processed/
+*.ipynb_checkpoints/
+.ipynb_checkpoints/
