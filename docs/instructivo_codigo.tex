@@ -1,0 +1,457 @@
+% ============================================================================
+%  Rough Paths Lab — Instructivo del código
+%  Detección de anomalías por Rough Path Signatures
+%  + Ecuaciones Diferenciales Neuronales (RNN -> NODE -> NCDE -> NRDE)
+%
+%  Compilar con:  pdflatex instructivo_codigo.tex   (dos veces, por el índice)
+%  No requiere paquetes exóticos; compila en Overleaf tal cual.
+% ============================================================================
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\geometry{margin=2.4cm}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{enumitem}
+% ---- paleta (definida ANTES de hyperref, que la referencia) ----------------
+\definecolor{azulref}{HTML}{0D47A1}
+\definecolor{naranjaref}{HTML}{E65100}
+\definecolor{moradoref}{HTML}{6A1B9A}
+\definecolor{grisfondo}{HTML}{F4F6FA}
+\definecolor{griscoment}{HTML}{5A6B7B}
+\definecolor{verdekw}{HTML}{2E7D32}
+
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=azulref, urlcolor=naranjaref,
+            citecolor=azulref, pdftitle={Rough Paths Lab - Instructivo del codigo}}
+
+% ---- estilo de código ------------------------------------------------------
+\lstdefinestyle{py}{
+  language=Python,
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{azulref}\bfseries,
+  commentstyle=\color{griscoment}\itshape,
+  stringstyle=\color{verdekw},
+  numberstyle=\tiny\color{griscoment},
+  backgroundcolor=\color{grisfondo},
+  frame=leftline, framerule=2pt, rulecolor=\color{naranjaref},
+  numbers=left, numbersep=8pt, tabsize=4, breaklines=true,
+  showstringspaces=false, columns=fullflexible, xleftmargin=14pt,
+  literate={á}{{\'a}}1 {é}{{\'e}}1 {í}{{\'i}}1 {ó}{{\'o}}1 {ú}{{\'u}}1
+           {ñ}{{\~n}}1 {Á}{{\'A}}1 {É}{{\'E}}1 {Í}{{\'I}}1 {Ó}{{\'O}}1
+           {ú}{{\'u}}1 {ü}{{\"u}}1 {°}{{\textdegree}}1 {δ}{{$\delta$}}1
+           {Δ}{{$\Delta$}}1 {μ}{{$\mu$}}1 {Σ}{{$\Sigma$}}1 {θ}{{$\theta$}}1
+           {α}{{$\alpha$}}1 {β}{{$\beta$}}1 {λ}{{$\lambda$}}1 {φ}{{$\varphi$}}1
+}
+\lstset{style=py}
+
+\newtheorem{definicion}{Definición}
+\newtheorem{teorema}{Teorema}
+
+% ---- portada ---------------------------------------------------------------
+\title{\textbf{Rough Paths Lab}\\[4pt]
+  \large Instructivo del código\\[10pt]
+  \normalsize Detección de anomalías por \emph{Rough Path Signatures}\\
+  y Ecuaciones Diferenciales Neuronales (RNN $\to$ NODE $\to$ NCDE $\to$ NRDE)}
+\author{Documento técnico de la tesis}
+\date{Junio 2026}
+
+\begin{document}
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+\noindent
+Este documento explica, módulo por módulo, el código del proyecto
+\textbf{Rough Paths Lab}. El proyecto aborda dos temas unidos por un mismo
+lenguaje matemático ---el de los \emph{caminos rugosos} (rough paths) de
+Terry Lyons---: (i) la \textbf{detección de anomalías} en series de tiempo
+mediante \emph{signaturas}, y (ii) las \textbf{ecuaciones diferenciales
+neuronales}, construidas desde las redes recurrentes hasta las Neural RDE.
+Todo el cómputo está en la carpeta \texttt{backend/} (NumPy puro, sin
+frameworks de aprendizaje profundo) y la visualización interactiva en
+\texttt{frontend/}. Se prioriza el lema \emph{pocos datos pero entendibles}:
+los conjuntos son pequeños y reproducibles.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+% ============================================================================
+\section{Visión general y estructura}
+% ============================================================================
+
+El proyecto se organiza en dos carpetas principales y una de datos:
+
+\begin{lstlisting}[numbers=none]
+Tesis Signaturas Junio 2026/
+|- backend/        # TODO el cómputo (los dos temas)
+|   |- signaturas.py        # signaturas de Chen, log-signatura, transformaciones
+|   |- registro.py          # registro extensible de detectores (decorador)
+|   |- detectores.py        # 13 clásicos + familia Signatures (suite completa)
+|   |- evaluacion.py        # protocolo PU (DR/AR) + matrices de Jaccard
+|   |- simuladores.py       # 3 contextos multivariados (it / ambiental / eeg)
+|   |- autodiff.py          # motor de retropropagación en NumPy
+|   |- neuralde.py          # RNN, GRU, NeuralODE, NeuralCDE, NeuralRDE
+|   |- cargador.py          # datos AMI reales (parquet) + 4 modos de muestreo
+|   |- anomalias.py         # inyector de las 7 anomalías AMI
+|   |- crear_muestra_ami.py # genera la muestra anonimizada de datos reales
+|   |- pipeline_anomalias.py / pipeline_neuralde.py / pipeline_ami.py
+|- frontend/       # aplicación web (SPA) servida en localhost
+|   |- servidor.py          # fusiona outputs/ en datos.json y sirve la web
+|   |- index.html, css/, js/
+|- outputs/        # resultados pre-calculados que consume el frontend
+|- Raw_Processed/  # MUESTRA anonimizada de datos AMI (60 medidores, 1 mes)
+\end{lstlisting}
+
+\noindent\textbf{Idea central.} La \emph{signatura} de un camino es una
+colección de integrales iteradas que resume su geometría. Sirve a la vez como
+descriptor para detectar anomalías y como objeto que define la dinámica de las
+Neural RDE. Ese es el hilo conductor de todo el proyecto.
+
+\paragraph{Cómo ejecutar.} Doble clic en \texttt{Iniciar Rough Paths Lab.bat}
+(Windows) o bien:
+\begin{lstlisting}[numbers=none]
+python frontend/servidor.py          # abre http://localhost:8001
+python -m backend.pipeline_anomalias # regenera los datos simulados
+python -m backend.pipeline_neuralde  # entrena los modelos neuronales
+python -m backend.pipeline_ami --demo# demo AMI sobre la muestra incluida
+\end{lstlisting}
+
+% ============================================================================
+\section{Fundamento matemático: la signatura de un camino}
+% ============================================================================
+
+\begin{definicion}[Signatura]
+Sea $X:[0,T]\to\mathbb{R}^d$ un camino de variación acotada. Su
+\emph{signatura} es la sucesión de integrales iteradas
+\[
+S(X)^{(i_1,\dots,i_k)} \;=\!\!\int\limits_{0<t_1<\cdots<t_k<T}\!\!
+   dX^{i_1}_{t_1}\cdots\, dX^{i_k}_{t_k},
+\qquad i_j\in\{1,\dots,d\}.
+\]
+El nivel $k$ agrupa todas las palabras de longitud $k$ (hay $d^k$).
+\end{definicion}
+
+Tres propiedades la hacen el descriptor canónico de un camino:
+
+\begin{enumerate}[leftmargin=1.6em]
+\item \textbf{Identidad de Chen.} Para la concatenación de caminos,
+  $S(X * Y) = S(X)\otimes S(Y)$. Para un segmento lineal de incremento
+  $\delta$, el nivel $k$ es $\delta^{\otimes k}/k!$. Esto permite calcular la
+  signatura de un camino lineal a trozos como producto de exponenciales
+  tensoriales ---es lo que implementa \texttt{signaturas.py}.
+\item \textbf{Producto \emph{shuffle}.} El producto de dos coordenadas es una
+  suma de coordenadas de orden superior, p.\,ej.
+  $S^{(i)}S^{(j)} = S^{(i,j)} + S^{(j,i)}$. Consecuencia: los funcionales
+  lineales sobre la signatura forman un álgebra que separa puntos, de donde se
+  obtiene la \textbf{universalidad} (todo funcional continuo del camino se
+  aproxima linealmente sobre signaturas).
+\item \textbf{Unicidad} (Hambly--Lyons, 2010). La signatura determina el camino
+  salvo reparametrización y tramos ``tree-like''. Añadiendo el tiempo como
+  canal extra (\emph{aumento temporal}) se elimina esa ambigüedad y, de paso,
+  el \emph{tipo de muestreo} queda codificado en la propia firma.
+\end{enumerate}
+
+\paragraph{Decaimiento factorial.}
+$\lVert S^{(k)}\rVert \le \lVert X\rVert_{1\text{-var}}^k / k!$: los niveles
+altos pesan factorialmente menos, por lo que truncar en $m=2,3,4$ retiene casi
+toda la información, con dimensión $\sum_{k\le m} d^k$.
+
+\newpage
+% ============================================================================
+\section{Parte I — Detección de anomalías}
+% ============================================================================
+
+\subsection{\texttt{signaturas.py}: cálculo vectorizado y log-signatura}
+
+El cálculo se hace \emph{por lotes} (todos los caminos a la vez) con la
+recursión de Chen nivel a nivel. La función central:
+
+\begin{lstlisting}
+def signaturas_lote(paths, depth):
+    """Signatura truncada de N caminos lineales a trozos, vectorizada.
+    paths : (N, n, d) -- N caminos con n puntos en R^d
+    Devuelve (N, dim_signatura(d, depth)) con los niveles concatenados.
+    Recursión de Chen:  S'^k = S^k + sum_{j<k} S^j (x) e^{k-j} + e^k,
+    con e^k = delta^{(x)k}/k! la signatura del segmento actual."""
+    delta = np.diff(paths, axis=1)              # incrementos por segmento
+    S1 = np.zeros((N, d)); S2 = ...; S3 = ...; S4 = ...
+    for t in range(n - 1):
+        e1 = delta[:, t, :]                     # delta
+        e2 = _kron_lote(e1, e1) / 2.0           # delta(x)delta / 2!
+        ...
+        S2 += _kron_lote(S1, e1) + e2           # actualización de Chen
+        S1 += e1
+    return np.concatenate([S1, S2, S3, S4], axis=1)
+\end{lstlisting}
+
+\noindent El producto tensorial aplanado por filas \texttt{\_kron\_lote(a,b)}
+calcula $(N,p)\otimes(N,q)\to(N,pq)$ con \emph{broadcasting}, evitando bucles
+en Python. El módulo se auto-verifica (al ejecutarlo) comprobando que
+$S^{(t)}=1$ exactamente y la identidad de \emph{shuffle}.
+
+\paragraph{Log-signatura de nivel 2.} Elimina la redundancia del \emph{shuffle}.
+A nivel 2 las coordenadas libres son los incrementos y las \textbf{áreas de
+Lévy}:
+\[
+A^{ij} = \tfrac12\big(S^{(i,j)} - S^{(j,i)}\big),
+\]
+el área firmada que el camino proyectado al plano $(i,j)$ barre respecto a su
+cuerda. Es la representación que usan el detector \texttt{LogSigMaHa} y el
+método log-ODE de las Neural RDE.
+
+\begin{lstlisting}
+def logsig_nivel2_lote(paths):
+    """Log-signatura nivel 2 = incrementos DeltaX  +  áreas de Lévy A^{ij}."""
+    sig = signaturas_lote(paths, depth=2)
+    L1  = sig[:, :d]                            # nivel 1: incrementos netos
+    S2  = sig[:, d:].reshape(N, d, d)
+    A   = 0.5 * (S2 - np.transpose(S2, (0, 2, 1)))   # parte antisimétrica
+    iu, ju = np.triu_indices(d, k=1)
+    return np.concatenate([L1, A[:, iu, ju]], axis=1)
+\end{lstlisting}
+
+\paragraph{Transformaciones de camino (\texttt{construir\_caminos}).}
+Convierte series (uni o multivariadas) en caminos listos para la signatura.
+La opción clave es el \textbf{aumento temporal}: insertar el tiempo real como
+coordenada~0. Esto (a) garantiza unicidad de la signatura y (b) codifica el
+\emph{muestreo} ---regular, irregular o por eventos--- dentro de la firma. Otras
+transformaciones disponibles: punto base, \emph{lead-lag} y normalización por
+ventana o global.
+
+\subsection{\texttt{registro.py}: añadir detectores sin tocar el resto}
+
+Se usa el patrón \emph{registry}: cada detector es una clase con métodos
+\texttt{ajustar} y \texttt{puntuar}, decorada con \texttt{@registrar}. Queda
+disponible automáticamente en la suite, los pipelines y el frontend.
+
+\begin{lstlisting}
+@registrar("MiDetector", familia="C-ML", vista="pca",
+           descripcion="Distancia coseno al centroide global.")
+class MiDetector(DetectorBase):
+    def ajustar(self, X):  self.mu = X.mean(axis=0)
+    def puntuar(self, X):  return 1 - coseno(X, self.mu)   # score creciente en anomalía
+\end{lstlisting}
+
+\noindent La política de hiperparámetros es:
+\emph{valores por defecto} $<$ \emph{automáticos} (\texttt{auto\_hp(X)}) $<$
+\emph{overrides} del usuario. Así la optimización es automática pero siempre
+seleccionable a mano. Las ``vistas'' (\texttt{shape}, \texttt{aug},
+\texttt{pca}, \texttt{sig2..4}, \texttt{logsig2}) las construye la suite una
+sola vez y las comparte entre detectores.
+
+\subsection{\texttt{detectores.py}: las cinco familias}
+
+Trece detectores clásicos en cuatro familias (A--Estadísticos, B--Clustering,
+C--ML, D--Alternativos) más la familia \textbf{Signatures}. La
+\texttt{SuiteDetectores} orquesta todo: construye las vistas, instancia los
+detectores con sus hiperparámetros y los puntúa. Acepta series univariadas
+\texttt{(N,n)} o \textbf{multivariadas} \texttt{(N,n,c)} y tiempos
+irregulares~\texttt{t}.
+
+\begin{table}[h]\centering\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+Detector & Familia & Hiperparámetro automático \\ \midrule
+KDE        & A--Estadístico & $h = N^{-1/(d+4)}$ (regla de Scott) \\
+GMM        & A--Estadístico & $k=\arg\min$ BIC \\
+KMeans     & B--Clustering  & $k$ por codo (kneedle) \\
+LOF        & B--Clustering  & $k=\max(5,\sqrt{N})$ \\
+HDBSCAN    & B--Clustering  & $\text{mcs}=\max(5,N/50)$ \\
+IForest    & C--ML          & \texttt{max\_samples} según $N$ \\
+OCSVM      & C--ML          & $\nu$ por fracción MAD-Z \\
+Autoencoder& C--ML          & red entrenada con \texttt{autodiff.py} \\
+Conformal  & D--Alternativo & $k=2\log_2 N$ \\
+SigMaHaKNN & Signatures     & $k\in\{3,10,20\}$, PCA a 60 si $D>60$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\noindent Los detectores de \textbf{Signatures} operan sobre la firma del
+camino (con aumento temporal). El más potente, \texttt{SigMaHaKNN}, mide una
+distancia de Mahalanobis \emph{local}:
+\[
+s(\varphi)=\sqrt{(\varphi-\mu_k)^\top(\Sigma_k+\lambda I)^{-1}(\varphi-\mu_k)},
+\]
+donde $\mu_k,\Sigma_k$ son la media y covarianza de los $k$ vecinos de la
+signatura $\varphi$ en el conjunto base. A diferencia del $T^2$ global, cada
+punto se compara con \emph{su} vecindario, lo que funciona en espacios
+multimodales.
+
+\subsection{\texttt{simuladores.py}: tres contextos multivariados}
+
+Generadores de series multivariadas con anomalías etiquetadas, elegidos para
+cubrir los tres regímenes de muestreo:
+
+\begin{itemize}[leftmargin=1.6em]
+\item \textbf{it} --- telemetría de servidores (4 canales: cpu, mem, red, lat),
+  \emph{muestreo regular} cada 5\,min. Anomalías: DDoS, fuga de memoria,
+  criptominería, etc.
+\item \textbf{ambiental} --- estación de sensores (3 canales),
+  \emph{muestreo irregular por eventos} (inter-arribos Gamma). Incluye
+  \texttt{RafagaMuestreo}: una anomalía \emph{del muestreo} (los valores son
+  normales; lo anómalo es la rejilla temporal).
+\item \textbf{eeg} --- electroencefalograma sintético (6 canales, 128\,Hz),
+  \emph{alta frecuencia}. Ritmos $\alpha/\beta/\theta$ + ruido $1/f$.
+\end{itemize}
+
+\noindent Cada generador inyecta 7 tipos de anomalía sobre copias de ventanas
+reales y devuelve \texttt{X}, \texttt{t}, etiquetas y metadatos. El tamaño se
+controla con \texttt{n\_ventanas} (por defecto pequeño: $\sim$300).
+
+\subsection{\texttt{evaluacion.py}: protocolo PU y Jaccard}
+
+Solo conocemos positivos (anomalías inyectadas); los ``originales'' son
+no-etiquetados. Por eso se usa \emph{PU-learning}:
+\begin{align*}
+\tau_M &= \text{percentil } q\ (=90) \text{ de los scores de } M \text{ sobre originales},\\
+\mathrm{AR}_M &= P(\text{score}_M>\tau_M \mid \text{original})\quad(\approx 1-q),\\
+\mathrm{DR}_M &= P(\text{score}_M>\tau_M \mid \text{sintético}).
+\end{align*}
+A igualdad de AR (mismo presupuesto de alertas), un DR mayor indica mejor
+detector. La \textbf{similitud de Jaccard}
+$J(M,M')=|A_M\cap A_{M'}|/|A_M\cup A_{M'}|$ sobre las anomalías detectadas mide
+si dos detectores son redundantes (J alto) o complementarios (J bajo, DR alto).
+
+% ============================================================================
+\section{Parte II — Ecuaciones diferenciales neuronales}
+% ============================================================================
+
+\subsection{\texttt{autodiff.py}: retropropagación en NumPy}
+
+Motor de diferenciación automática en modo reverso, base de \emph{todos} los
+modelos neuronales (incluido el Autoencoder de la suite). Cada operación
+construye un nodo de un grafo; \texttt{backward()} aplica la regla de la cadena
+en orden topológico inverso. Soporta \emph{broadcasting} (con
+``des-difusión'' del gradiente), \texttt{matmul}, \texttt{tanh},
+\texttt{sigmoid}, \texttt{softmax}-crossentropy y el optimizador Adam.
+El módulo se auto-verifica comparando con gradientes numéricos.
+
+\begin{lstlisting}
+class T:                       # tensor con gradiente
+    def __matmul__(self, otro):
+        out = T(self.data @ otro.data, (self, otro))
+        def bw(g):             # regla de la cadena del producto matricial
+            self._acum(g @ otro.data.swapaxes(-1, -2))
+            otro._acum(self.data.swapaxes(-1, -2) @ g)
+        out._bw = bw
+        return out
+\end{lstlisting}
+
+\subsection{\texttt{neuralde.py}: de la RNN a la Neural RDE}
+
+La progresión es una sola idea madurando; cada etapa corrige un defecto
+demostrable de la anterior.
+
+\paragraph{1. RNN/GRU --- sistema dinámico discreto.}
+\[ h_{k+1} = \varphi(W_h h_k + W_x x_{k+1} + b). \]
+Es ciega al tiempo físico entre muestras; el $\Delta t$ se añade como entrada
+extra (un parche). Esto motiva todo lo demás.
+
+\paragraph{2. Neural ODE --- profundidad continua} (Chen et al., 2018).
+Límite de las conexiones residuales $h_{k+1}=h_k+f(h_k)$ al hacer el paso $\to0$:
+\[ \frac{dh}{dt}=f_\theta(h(t)),\qquad h(0)=\mathrm{enc}(x_0). \]
+Se integra con Runge--Kutta~4. \textbf{Limitación} (Picard--Lindelöf): $h(t)$
+queda determinado por $h(0)$; las observaciones posteriores no influyen. En el
+experimento de espirales con fase inicial aleatoria, el NODE queda en
+$\approx 50\%$ ---justo lo que predice la teoría.
+
+\paragraph{3. Neural CDE --- el dato como control} (Kidger et al., 2020).
+\[ dz_t = f_\theta(z_t)\,dX_t, \]
+donde $X$ es la interpolación continua de las observaciones (con el tiempo como
+canal). El dato deja de ser condición inicial y pasa a \emph{controlar} la
+dinámica en todo $t$: es el análogo continuo exacto de la RNN y maneja el
+muestreo irregular de forma natural (el $\Delta t$ vive dentro de $dX$).
+
+\paragraph{4. Neural RDE --- método log-ODE} (Morrill et al., 2021).
+Para series largas o rugosas, en cada ventana $[t_j,t_{j+1}]$ el control se
+resume por su log-signatura:
+\[ z_{j+1} = z_j + g_\theta(z_j)\cdot \mathrm{logsig}^{(2)}_{[t_j,t_{j+1}]}(X). \]
+La log-signatura de nivel 2 (incrementos $+$ áreas de Lévy) es el resumen
+geométrico mínimo que garantiza orden de convergencia 2. Permite dar $n/s$
+pasos en lugar de $n$ (menos profundidad, gradientes más estables) sin perder
+la geometría intra-ventana. \textbf{Es el mismo objeto que usa el detector
+\texttt{LogSigMaHa}}: detección y modelado comparten lenguaje.
+
+\noindent Los cinco modelos comparten la interfaz \texttt{ModeloBase} y se
+entrenan con \texttt{entrenar\_clasificador} (Adam). El experimento de juguete
+(\texttt{datos\_espirales}) y la demostración de que un NODE aprende el campo de
+Van der Pol están en el mismo módulo.
+
+% ============================================================================
+\section{Parte III — Frontend (visualización)}
+% ============================================================================
+
+\begin{itemize}[leftmargin=1.6em]
+\item \texttt{servidor.py} --- al arrancar, fusiona todo \texttt{outputs/} en un
+  único \texttt{datos.json} (lo comprime a \texttt{.gz}) y lo sirve junto a la
+  SPA. Funciona también empaquetado como \texttt{.exe} (PyInstaller).
+\item \texttt{js/signatures.js} --- recalcula signaturas \textbf{en vivo en el
+  navegador} con la misma identidad de Chen del backend (verificable:
+  $S^{(t)}=1$).
+\item \texttt{js/anims.js} --- 21 animaciones \texttt{canvas}: una por detector
+  y una por etapa de las ecuaciones neuronales.
+\item \texttt{js/teoria.js} --- el contenido matemático (renderizado con KaTeX,
+  offline) de cada detector y cada etapa.
+\item \texttt{js/app.js} --- carga \texttt{datos.json}, construye índices y
+  renderiza las 13 secciones interactivas (Plotly).
+\end{itemize}
+
+% ============================================================================
+\section{Parte IV — Datos: muestra anonimizada}
+% ============================================================================
+
+El dataset AMI real ($\sim$7\,GB, un año de medidores) no se incluye por tamaño
+ni por privacidad. En su lugar, \texttt{crear\_muestra\_ami.py} genera una
+\textbf{muestra anonimizada}: toma 60 medidores de un mes y sustituye el
+identificador real por códigos \texttt{AMI\_0001}, \dots El mapeo se construye
+en memoria y \emph{no se guarda}, de modo que la muestra es efectivamente
+anónima.
+
+\begin{lstlisting}
+# Mapeo aleatorio medidor_real -> AMI_0001..AMI_00NN (NO se persiste)
+rng = np.random.default_rng(SEED)
+barajados = list(ids_elegidos); rng.shuffle(barajados)
+mapeo = {real: f"AMI_{i+1:04d}" for i, real in enumerate(barajados)}
+df["ID"] = df["ID"].map(mapeo)         # anonimización irreversible
+\end{lstlisting}
+
+\noindent Los resultados AMI que muestra el frontend se calcularon con el
+dataset completo original. La muestra permite (a) entender la estructura de los
+datos reales y (b) correr \texttt{pipeline\_ami --demo} de extremo a extremo.
+
+% ============================================================================
+\section{Reproducir todo}
+% ============================================================================
+
+\begin{lstlisting}[numbers=none]
+# 1) datos simulados + métricas (pocos minutos)
+python -m backend.pipeline_anomalias
+# 2) modelos neuronales (curvas, Van der Pol, trayectorias)
+python -m backend.pipeline_neuralde
+# 3) demo AMI sobre la muestra anonimizada
+python -m backend.pipeline_ami --demo
+# 4) lanzar la aplicación
+python frontend/servidor.py
+\end{lstlisting}
+
+\noindent Cada módulo del \texttt{backend} se auto-verifica al ejecutarlo
+directamente (por ejemplo \texttt{python backend/signaturas.py} comprueba la
+identidad de Chen, el \emph{shuffle} y la log-signatura;
+\texttt{python backend/autodiff.py} valida los gradientes numéricamente).
+
+\vfill
+\noindent\rule{\linewidth}{0.4pt}\\[2pt]
+{\footnotesize Rough Paths Lab — backend NumPy + autodiff propio; frontend
+Plotly + KaTeX offline. Protocolo PU con $\tau=$ percentil 90. Referencias
+clave: Lyons (1998); Hambly \& Lyons (2010); Chen et al.\ (2018); Kidger et
+al.\ (2020); Morrill et al.\ (2021).}
+
+\end{document}

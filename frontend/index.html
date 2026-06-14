@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rough Paths Lab — Anomalías &amp; Ecuaciones Diferenciales Neuronales</title>
+<link rel="stylesheet" href="css/style.css?v=5">
+<link rel="stylesheet" href="js/katex/katex.min.css">
+</head>
+<body>
+
+<!-- ═══ Loader ═══ -->
+<div id="loader">
+  <svg width="220" height="90" viewBox="0 0 220 90" fill="none">
+    <path d="M8 60 C 30 10, 50 80, 75 45 S 120 8, 140 50 S 190 85, 212 30"
+          stroke="#ffb74d" stroke-width="3.5" stroke-linecap="round"/>
+  </svg>
+  <div class="ltxt">calculando signaturas…</div>
+</div>
+
+<!-- ═══ Sidebar ═══ -->
+<aside class="side-nav">
+  <div class="marca">
+    <h1>∮ Rough Paths Lab</h1>
+    <span>Anomalías AMI + simuladas · Neural ODE/CDE/RDE</span>
+  </div>
+  <nav id="nav-links">
+    <div class="grupo">Fundamentos</div>
+    <a href="#sec-inicio"><span class="ico">⌂</span> Inicio</a>
+    <a href="#sec-fundamentos"><span class="ico">∮</span> Teoría de signaturas</a>
+    <a href="#sec-datos"><span class="ico">🗃</span> Datos &amp; muestreo</a>
+    <div class="grupo">Detección de anomalías</div>
+    <a href="#sec-series"><span class="ico">⚡</span> Series AMI</a>
+    <a href="#sec-multivar"><span class="ico">🛰</span> Contextos multivariados</a>
+    <a href="#sec-detectores"><span class="ico">🔬</span> Catálogo de detectores</a>
+    <a href="#sec-resultados"><span class="ico">📊</span> Resultados DR/AR</a>
+    <a href="#sec-jaccard"><span class="ico">🧩</span> Similitud Jaccard</a>
+    <a href="#sec-inspector"><span class="ico">🔎</span> Inspector</a>
+    <a href="#sec-signaturas"><span class="ico">🌀</span> Explorador de signaturas</a>
+    <div class="grupo">Ecuaciones dif. neuronales</div>
+    <a href="#sec-nde-teoria"><span class="ico">🧭</span> De RNN a Neural RDE</a>
+    <a href="#sec-nde-lab"><span class="ico">🧪</span> Laboratorio Neural DE</a>
+    <div class="grupo">Cierre</div>
+    <a href="#sec-conclusiones"><span class="ico">✓</span> Síntesis</a>
+  </nav>
+</aside>
+
+<main>
+<div class="contenido">
+
+<!-- ═══ INICIO ═══ -->
+<section id="sec-inicio">
+  <div class="hero">
+    <svg class="firma-svg" width="300" height="140" viewBox="0 0 300 140" fill="none">
+      <path d="M10 100 C 50 20, 80 130, 120 70 S 190 10, 220 80 S 280 130, 295 40"
+            stroke="rgba(255,183,77,.85)" stroke-width="3" stroke-linecap="round"/>
+    </svg>
+    <h2>Detección de anomalías por <span class="hl">Rough Path Signatures</span><br>
+        y Ecuaciones Diferenciales Neuronales <span class="hl">Rugosas</span></h2>
+    <p>Un laboratorio interactivo: 27 detectores sobre consumo eléctrico AMI real de Colombia y tres
+       contextos simulados multivariados masivos — más la construcción completa, desde redes recurrentes
+       hasta Neural RDE, de los modelos que aprenden dinámica continua controlada por datos.</p>
+    <div class="rgrid" id="hero-cards"></div>
+  </div>
+  <div id="mapa-sistema"></div>
+</section>
+
+<!-- ═══ FUNDAMENTOS ═══ -->
+<section id="sec-fundamentos">
+  <div class="sec-head"><h2>La signatura de un camino</h2><span class="chip-tema t-sig">Rough Paths</span></div>
+  <p class="sec-sub">El objeto central de todo el proyecto: una jerarquía de integrales iteradas que
+     resume la geometría de cualquier trayectoria — el «desarrollo de Taylor» canónico de un camino.</p>
+  <div id="fund-contenido"></div>
+</section>
+
+<!-- ═══ DATOS Y MUESTREO ═══ -->
+<section id="sec-datos">
+  <div class="sec-head"><h2>Datos &amp; tipos de muestreo</h2><span class="chip-tema t-base">4 fuentes</span></div>
+  <p class="sec-sub">Un dataset real (AMI Colombia) y tres simulados multivariados, elegidos para cubrir los
+     tres regímenes de muestreo: regular, irregular por eventos y alta frecuencia.</p>
+  <div id="datos-cards"></div>
+  <div class="grid-2">
+    <div class="plot-card"><h3>Demo: una misma trayectoria, tres muestreos</h3>
+      <div id="plot-muestreo" style="height:340px"></div>
+      <p style="font-size:12.5px;color:var(--tinta-2);margin-top:6px">El aumento temporal de la signatura
+      (canal t) y las Neural CDE/RDE consumen los tiempos reales sin interpolación previa: el muestreo
+      queda <b>codificado en la geometría del camino</b>.</p>
+    </div>
+    <div class="plot-card"><h3>Los 4 modos de muestreo AMI</h3><div id="modos-ami"></div></div>
+  </div>
+</section>
+
+<!-- ═══ SERIES AMI ═══ -->
+<section id="sec-series">
+  <div class="sec-head"><h2>Series AMI: normal vs anómala</h2><span class="chip-tema t-base">datos reales</span></div>
+  <p class="sec-sub">Ventanas semanales de 168 h de medidores reales; las anomalías se inyectan sobre copias
+     de la misma casa — el par perfecto para entender qué ve cada detector.</p>
+  <div class="controles">
+    <div class="ctrl"><label>Tipo de anomalía</label><select id="series-tipo"></select></div>
+    <div class="ctrl"><label>Casa <span class="val" id="series-casa-v">1</span></label>
+      <input type="range" id="series-casa" min="0" max="9" value="0"></div>
+    <div class="ctrl"><label>Hora inicial <span class="val" id="series-h0-v">0</span></label>
+      <input type="range" id="series-h0" min="0" max="167" value="0"></div>
+    <div class="ctrl"><label>Hora final <span class="val" id="series-h1-v">167</span></label>
+      <input type="range" id="series-h1" min="0" max="167" value="167"></div>
+  </div>
+  <div class="grid-31">
+    <div>
+      <div class="plot-card"><div id="plot-series" style="height:330px"></div></div>
+      <div class="plot-card"><h3>🔍 Zoom de la ventana seleccionada</h3>
+        <div id="plot-series-zoom" style="height:260px"></div></div>
+    </div>
+    <div id="series-info"></div>
+  </div>
+</section>
+
+<!-- ═══ CONTEXTOS MULTIVARIADOS ═══ -->
+<section id="sec-multivar">
+  <div class="sec-head"><h2>Contextos simulados multivariados</h2><span class="chip-tema t-base">IT · ambiental · EEG</span></div>
+  <p class="sec-sub">Tres dominios con anomalías propias y muestreos distintos. Cada par muestra la ventana
+     original (gris) y su versión anómala (color) en todos los canales.</p>
+  <div class="controles">
+    <div class="ctrl"><label>Contexto</label><select id="mv-ctx"></select></div>
+    <div class="ctrl"><label>Tipo de anomalía</label><select id="mv-tipo"></select></div>
+    <div class="ctrl"><label>Ejemplar</label><select id="mv-par"></select></div>
+  </div>
+  <div class="grid-31">
+    <div class="plot-card"><div id="plot-multivar" style="height:520px"></div></div>
+    <div id="mv-info"></div>
+  </div>
+</section>
+
+<!-- ═══ CATÁLOGO DE DETECTORES ═══ -->
+<section id="sec-detectores">
+  <div class="sec-head"><h2>Catálogo de detectores</h2><span class="chip-tema t-sig">27 algoritmos · 5 familias</span></div>
+  <p class="sec-sub">Selecciona un algoritmo: aparece su <b>explicación gráfica animada</b> y su
+     <b>construcción matemática</b> — definición, score, hiperparámetros automáticos y propiedades.
+     Los dos últimos de la familia Signatures fueron añadidos mediante el registro extensible.</p>
+  <div class="algo-galeria" id="algo-galeria"></div>
+  <div id="algo-panel"></div>
+</section>
+
+<!-- ═══ RESULTADOS ═══ -->
+<section id="sec-resultados">
+  <div class="sec-head"><h2>Resultados: tasas de detección</h2><span class="chip-tema t-base">protocolo PU · τ = p90</span></div>
+  <p class="sec-sub">Con presupuesto de alertas fijo (AR ≈ 10% sobre originales), ¿qué fracción de las
+     anomalías inyectadas captura cada detector? DR por dataset, tipo y familia.</p>
+  <div class="controles">
+    <div class="ctrl"><label>Dataset</label><select id="dr-dataset"></select></div>
+    <div class="ctrl"><label>Tipo de anomalía</label><select id="dr-tipo"></select></div>
+  </div>
+  <div id="dr-resumen"></div>
+  <div class="plot-card"><div id="plot-dr" style="height:430px"></div></div>
+  <div class="grid-2">
+    <div class="plot-card"><h3>Heatmap detector × tipo</h3><div id="plot-dr-heat" style="height:560px"></div></div>
+    <div>
+      <div class="plot-card"><h3>Top 5 detectores</h3><div id="dr-top5"></div></div>
+      <div id="dr-lectura"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ JACCARD ═══ -->
+<section id="sec-jaccard">
+  <div class="sec-head"><h2>Similitud de Jaccard entre detectores</h2><span class="chip-tema t-base">redundancia vs complementariedad</span></div>
+  <p class="sec-sub">J(M,M′) = |A∩A′| / |A∪A′| sobre las anomalías detectadas. Bloques claros = detectores
+     que ven lo mismo; parejas con J bajo y DR alto = candidatos a ensamble.</p>
+  <div class="controles">
+    <div class="ctrl"><label>Dataset</label><select id="jac-dataset"></select></div>
+    <div class="ctrl"><label>Tipo</label><select id="jac-tipo"></select></div>
+  </div>
+  <div class="grid-31">
+    <div class="plot-card"><div id="plot-jaccard" style="height:640px"></div></div>
+    <div id="jac-info"></div>
+  </div>
+</section>
+
+<!-- ═══ INSPECTOR ═══ -->
+<section id="sec-inspector">
+  <div class="sec-head"><h2>Inspector de detecciones</h2><span class="chip-tema t-base">caso por caso</span></div>
+  <p class="sec-sub">Una serie concreta frente a un detector concreto: score normalizado vs umbral τ, y el
+     panorama de los 23–25 detectores sobre el mismo caso.</p>
+  <div class="controles">
+    <div class="ctrl"><label>Dataset</label><select id="insp-dataset"></select></div>
+    <div class="ctrl"><label>Detector</label><select id="insp-det"></select></div>
+    <div class="ctrl"><label>Tipo</label><select id="insp-tipo"></select></div>
+    <div class="ctrl"><label>Caso</label><select id="insp-caso"></select></div>
+  </div>
+  <div class="grid-31">
+    <div class="plot-card"><div id="plot-insp-serie" style="height:300px"></div>
+      <div id="plot-insp-scores" style="height:300px"></div></div>
+    <div id="insp-info"></div>
+  </div>
+</section>
+
+<!-- ═══ EXPLORADOR DE SIGNATURAS ═══ -->
+<section id="sec-signaturas">
+  <div class="sec-head"><h2>Explorador de signaturas</h2><span class="chip-tema t-sig">cálculo en vivo</span></div>
+  <p class="sec-sub">La signatura calculada en tu navegador (identidad de Chen) sobre datos reales.
+     Compara la firma del perfil normal y el anómalo, nivel a nivel, y lee la interpretación geométrica.</p>
+  <div class="controles">
+    <div class="ctrl"><label>Fuente</label><select id="sig-fuente"></select></div>
+    <div class="ctrl"><label>Tipo de anomalía</label><select id="sig-tipo"></select></div>
+    <div class="ctrl"><label>Caso</label><select id="sig-caso"></select></div>
+    <div class="ctrl"><label>Nivel máximo <span class="val" id="sig-grado-v">3</span></label>
+      <input type="range" id="sig-grado" min="1" max="4" value="3"></div>
+    <div class="ctrl" id="sig-rango-wrap"><label>Ventana <span class="val" id="sig-rango-v">0–167</span></label>
+      <input type="range" id="sig-h0" min="0" max="167" value="0" style="width:120px">
+      <input type="range" id="sig-h1" min="0" max="167" value="167" style="width:120px"></div>
+  </div>
+  <div class="grid-2">
+    <div class="plot-card"><h3>Desarrollo del camino (animación)</h3>
+      <canvas id="cv-firma" class="canvas-anim" style="height:300px"></canvas>
+      <div class="anim-controles"><button class="btn fantasma" id="btn-firma-replay">↻ Reiniciar</button>
+        <span class="desc">El camino se recorre y las normas por nivel se actualizan en vivo.</span></div>
+    </div>
+    <div class="plot-card"><div id="plot-sig-bars" style="height:360px"></div></div>
+  </div>
+  <div class="grid-2">
+    <div class="plot-card"><h3>Áreas de Lévy A<sup>ij</sup> (normal vs anómala)</h3>
+      <div id="plot-levy" style="height:330px"></div></div>
+    <div id="sig-niveles-panel"></div>
+  </div>
+</section>
+
+<!-- ═══ NDE TEORÍA ═══ -->
+<section id="sec-nde-teoria">
+  <div class="sec-head"><h2>De las RNN a las Neural RDE</h2><span class="chip-tema t-nde">construcción completa</span></div>
+  <p class="sec-sub">Cuatro etapas, cada una resolviendo el defecto estructural de la anterior:
+     discreto → continuo → controlado → rugoso. Selecciona una etapa para ver su animación y su matemática.</p>
+  <div class="nde-tabs" id="nde-tabs"></div>
+  <div id="nde-panel"></div>
+</section>
+
+<!-- ═══ NDE LAB ═══ -->
+<section id="sec-nde-lab">
+  <div class="sec-head"><h2>Laboratorio Neural DE</h2><span class="chip-tema t-nde">experimentos reproducibles</span></div>
+  <p class="sec-sub">Los cinco modelos entrenados desde cero (motor autodiff propio, sin frameworks) sobre dos
+     tareas y dos regímenes de muestreo — más el campo vectorial que un Neural ODE aprende de Van der Pol.</p>
+
+  <div class="plot-card"><h3>① Comparativa: accuracy de validación</h3>
+    <div class="controles" style="position:static;box-shadow:none;border:none;padding:4px 0">
+      <div class="ctrl"><label>Tarea</label><select id="lab-dataset"></select></div>
+    </div>
+    <div class="grid-2">
+      <div id="plot-lab-acc" style="height:360px"></div>
+      <div id="plot-lab-curvas" style="height:360px"></div>
+    </div>
+    <div id="lab-lectura"></div>
+  </div>
+
+  <div class="plot-card"><h3>② Neural ODE aprende la dinámica de Van der Pol</h3>
+    <div class="grid-2">
+      <div id="plot-vdp-campo" style="height:400px"></div>
+      <div id="plot-vdp-tray" style="height:400px"></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="plot-card"><h3>③ Estado oculto z(t) del Neural CDE (espirales)</h3>
+      <div id="plot-ncde-z" style="height:380px"></div></div>
+    <div class="plot-card"><h3>④ Método log-ODE: lo que «ve» el Neural RDE</h3>
+      <div id="plot-nrde-logsig" style="height:380px"></div></div>
+  </div>
+</section>
+
+<!-- ═══ CONCLUSIONES ═══ -->
+<section id="sec-conclusiones">
+  <div class="sec-head"><h2>Síntesis</h2><span class="chip-tema t-base">qué aprendimos</span></div>
+  <div id="conclusiones"></div>
+  <footer>
+    Rough Paths Lab · detección de anomalías por signaturas + ecuaciones diferenciales neuronales ·
+    muestra AMI anonimizada + 3 contextos simulados multivariados · τ = p90, protocolo PU-learning
+  </footer>
+</section>
+
+</div>
+</main>
+
+<script src="js/plotly.min.js"></script>
+<script src="js/katex/katex.min.js"></script>
+<script src="js/katex/auto-render.min.js"></script>
+<script src="js/signatures.js?v=5"></script>
+<script src="js/anims.js?v=5"></script>
+<script src="js/teoria.js?v=5"></script>
+<script src="js/app.js?v=5"></script>
+</body>
+</html>
