@@ -1,6 +1,36 @@
+# ─── Python ───────────────────────────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
-Raw_Processed/
-*.ipynb_checkpoints/
+*.egg-info/
 .ipynb_checkpoints/
+*.ipynb_checkpoints/
+
+# Entornos virtuales (no se suben; cada PC crea el suyo con requirements.txt)
+venv/
+.venv/
+env/
+.env
+
+# ─── Artefactos generados (se recrean al ejecutar) ──────────────────────────
+frontend/datos.json
+frontend/datos.json.gz
+outputs/ami_demo/
+
+# ─── Empaquetado / build ────────────────────────────────────────────────────
+build/
+dist/
+*.spec
+*.exe
+
+# ─── Config local de herramientas / IDE ─────────────────────────────────────
+.claude/
+.vscode/
+.idea/
+.DS_Store
+
+# ─── Datos crudos AMI ───────────────────────────────────────────────────────
+# Se sube SOLO la muestra anonimizada (pequeña); cualquier otro .parquet que
+# pongas en Raw_Processed/ queda excluido para no subir datos pesados/sensibles.
+Raw_Processed/*
+!Raw_Processed/ACTIVE_Enero_0.parquet

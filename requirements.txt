@@ -1,0 +1,18 @@
+# Dependencias de Rough Paths Lab.
+# Instalar en cualquier PC con:   pip install -r requirements.txt
+#
+# Rangos amplios para máxima compatibilidad (Python 3.9–3.13).
+# El frontend y los modelos neuronales NO necesitan más que esto:
+# no hace falta PyTorch ni TensorFlow (todo es NumPy puro).
+
+numpy>=1.23
+pandas>=1.5
+scikit-learn>=1.1
+scipy>=1.9
+
+# Solo para leer/crear la muestra AMI en formato Parquet (pipeline_ami,
+# crear_muestra_ami). El resto del proyecto funciona sin esto.
+pyarrow>=10.0
+
+# Opcional: solo si quieres generar el .exe portable con build_exe.py
+# pyinstaller>=5.0
